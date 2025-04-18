@@ -1,6 +1,4 @@
-# File: ci-templates/.github/workflows/docker-deploy.yml
-
-name: Reusable Docker Deploy
+name: Push to GHCR
 
 on:
   workflow_call:
@@ -19,11 +17,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Get Git SHA
+        id: get_sha
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Docker Build
-        run: docker build -t ghcr.io/genzitizens/${{ inputs.image_name }}:latest .
+        run: |
+          docker build \
+            -t ghcr.io/genzitizens/${{ inputs.image_name }}:latest \
+            -t ghcr.io/genzitizens/${{ inputs.image_name }}:${{ steps.get_sha.outputs.sha_short }} .
 
       - name: Docker Login
         run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u mediocreasian --password-stdin
 
       - name: Docker Push
-        run: docker push ghcr.io/genzitizens/${{ inputs.image_name }}:latest
+        run: |
+          docker push ghcr.io/genzitizens/${{ inputs.image_name }}:latest
+          docker push ghcr.io/genzitizens/${{ inputs.image_name }}:${{ steps.get_sha.outputs.sha_short }}
