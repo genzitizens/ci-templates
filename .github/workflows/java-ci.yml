@@ -1,14 +1,17 @@
 name: CI - Build and Test
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_call:
+    secrets:
+      DISCORD_WEBHOOK:
+        required: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -25,13 +28,12 @@ jobs:
         if: success()
         uses: Ilshidur/action-discord@master
         with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          webhook: ${{ env.DISCORD_WEBHOOK }}
           message: ":white_check_mark: CI build passed on `${{ github.ref }}` by ${{ github.actor }}"
 
       - name: Send Discord Notification (Failure)
         if: failure()
         uses: Ilshidur/action-discord@master
         with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          webhook: ${{ env.DISCORD_WEBHOOK }}
           message: ":x: CI build failed on `${{ github.ref }}` by ${{ github.actor }}"
-
