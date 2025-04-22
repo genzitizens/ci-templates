@@ -36,13 +36,15 @@ jobs:
       - name: Send Discord Notification (Success)
         if: success()
         uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
         with:
-          webhook: ${{ env.DISCORD_WEBHOOK }}
-          message: ":white_check_mark: Node.js build passed on `${{ github.ref }}` by ${{ github.actor }}"
+          args: ":white_check_mark: Node.js build passed on `${{ github.ref }}` by ${{ github.actor }}"
 
       - name: Send Discord Notification (Failure)
         if: failure()
         uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
         with:
-          webhook: ${{ env.DISCORD_WEBHOOK }}
-          message: ":x: Node.js build failed on `${{ github.ref }}` by ${{ github.actor }}"
+          args: ":x: Node.js build failed on `${{ github.ref }}` by ${{ github.actor }}"
