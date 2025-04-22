@@ -1,0 +1,48 @@
+name: CI - Node.js Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        required: false
+        type: string
+        default: "20"
+    secrets:
+      DISCORD_WEBHOOK:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests
+        run: npm test
+
+      - name: Send Discord Notification (Success)
+        if: success()
+        uses: Ilshidur/action-discord@master
+        with:
+          webhook: ${{ env.DISCORD_WEBHOOK }}
+          message: ":white_check_mark: Node.js build passed on `${{ github.ref }}` by ${{ github.actor }}"
+
+      - name: Send Discord Notification (Failure)
+        if: failure()
+        uses: Ilshidur/action-discord@master
+        with:
+          webhook: ${{ env.DISCORD_WEBHOOK }}
+          message: ":x: Node.js build failed on `${{ github.ref }}` by ${{ github.actor }}"
