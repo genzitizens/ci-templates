@@ -1,4 +1,4 @@
-name: CI - Build and Test
+name: CI - SpringBoot  Build and Test
 
 on:
   workflow_call:
@@ -27,13 +27,23 @@ jobs:
       - name: Send Discord Notification (Success)
         if: success()
         uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
         with:
-          webhook: ${{ env.DISCORD_WEBHOOK }}
-          message: ":white_check_mark: CI build passed on `${{ github.ref }}` by ${{ github.actor }}"
+          args: |
+            ✅ Build succeeded — SpringBoot-Test
+            🔀 Branch: ${{ github.ref_name }}
+            👤 Triggered by: ${{ github.actor }}
+            🔗 Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Send Discord Notification (Failure)
         if: failure()
         uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
         with:
-          webhook: ${{ env.DISCORD_WEBHOOK }}
-          message: ":x: CI build failed on `${{ github.ref }}` by ${{ github.actor }}"
+          args: |
+            ❌ Build failed — SpringBoot-Test
+            🔀 Branch: ${{ github.ref_name }}
+            👤 Triggered by: ${{ github.actor }}
+            🔗 Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

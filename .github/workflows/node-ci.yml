@@ -39,12 +39,20 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
         with:
-          args: ":white_check_mark: Node.js build passed on `${{ github.ref }}` by ${{ github.actor }}"
-
+          args: |
+            ✅ Build succeeded — NodeJS-Test
+            🔀 Branch: ${{ github.ref_name }}
+            👤 Triggered by: ${{ github.actor }}
+            🔗 Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      
       - name: Send Discord Notification (Failure)
         if: failure()
         uses: Ilshidur/action-discord@master
         env:
           DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
         with:
-          args: ":x: Node.js build failed on `${{ github.ref }}` by ${{ github.actor }}"
+          args: |
+            ❌ Build failed — NodeJS-Test
+            🔀 Branch: ${{ github.ref_name }}
+            👤 Triggered by: ${{ github.actor }}
+            🔗 Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
