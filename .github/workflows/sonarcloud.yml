@@ -1,5 +1,4 @@
-# .github/workflows/sonarcloud.yml
-name:  SonarCloud Analysis for SpringBoot
+name: Reusable - SonarCloud Analysis for SpringBoot
 
 on:
   workflow_call:
@@ -7,9 +6,11 @@ on:
       projectBaseDir:
         required: false
         type: string
-        default: '.'
+        default: "."
     secrets:
       SONAR_TOKEN:
+        required: true
+      DISCORD_WEBHOOK:
         required: true
 
 jobs:
@@ -17,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
     steps:
       - name: Checkout Code
@@ -25,8 +27,8 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
 
       - name: Cache SonarCloud packages
         uses: actions/cache@v3
@@ -41,3 +43,36 @@ jobs:
             -Dsonar.organization=genzitizens \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
+
+      - name: Check for Critical Issues and Quality Gate Failure
+        run: |
+          PROJECT_KEY="genzitizens_${{ github.event.repository.name }}"
+
+          echo "Waiting for SonarCloud analysis to finalize..."
+          sleep 15
+
+          # Fetch quality gate + metrics
+          ANALYSIS=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/measures/component?component=$PROJECT_KEY&metricKeys=coverage,code_smells,bugs,vulnerabilities,security_hotspots,duplicated_lines_density,alert_status,maintainability_rating")
+
+          QUALITY_GATE=$(echo "$ANALYSIS" | jq -r '.component.measures[] | select(.metric=="alert_status") | .value')
+          CRITICAL_ISSUES=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/issues/search?projectKeys=$PROJECT_KEY&severities=CRITICAL&resolved=false" | jq '.total')
+          COVERAGE=$(echo "$ANALYSIS" | jq -r '.component.measures[] | select(.metric=="coverage") | .value')
+          SMELLS=$(echo "$ANALYSIS" | jq -r '.component.measures[] | select(.metric=="code_smells") | .value')
+          DUPLICATIONS=$(echo "$ANALYSIS" | jq -r '.component.measures[] | select(.metric=="duplicated_lines_density") | .value')
+          RATING=$(echo "$ANALYSIS" | jq -r '.component.measures[] | select(.metric=="maintainability_rating") | .value')
+          HOTSPOTS=$(echo "$ANALYSIS" | jq -r '.component.measures[] | select(.metric=="security_hotspots") | .value')
+
+          if [ "$QUALITY_GATE" != "OK" ] || [ "$CRITICAL_ISSUES" -gt 0 ]; then
+            curl -X POST "$DISCORD_WEBHOOK" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "content": "**SonarCloud Alert for '${{ github.repository }}'**",
+                "embeds": [{
+                  "title": "Code Quality Issue Detected",
+                  "description": "**Quality Gate**: '"$QUALITY_GATE"'\n**Critical Issues**: '"$CRITICAL_ISSUES"'\n**Coverage**: '"$COVERAGE"'%\n**Code Smells**: '"$SMELLS"'\n**Duplications**: '"$DUPLICATIONS"'%\n**Maintainability**: '"$RATING"'\n**Security Hotspots**: '"$HOTSPOTS"'",
+                  "color": 16711680,
+                  "url": "https://sonarcloud.io/project/overview?id='"$PROJECT_KEY"'"
+                }]
+              }'
+          else
+            echo "No quality gate failures or critical issues."
