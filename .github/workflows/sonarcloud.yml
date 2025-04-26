@@ -10,7 +10,7 @@ on:
     secrets:
       SONAR_TOKEN:
         required: true
-      DISCORD_WEBHOOK:
+      DISCORD_WEBHOOK: 
         required: true
 
 jobs:
@@ -50,7 +50,6 @@ jobs:
 
           echo "Waiting for SonarCloud analysis to finalize..."
 
-          # Wait until the analysis is complete
           for i in {1..10}; do
             ANALYSIS=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/project_analyses/search?project=$PROJECT_KEY")
             STATUS=$(echo "$ANALYSIS" | jq -r '.analyses[0].status // empty')
@@ -64,7 +63,6 @@ jobs:
             sleep 5
           done
 
-          # Fetch quality gate + metrics
           METRICS=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/measures/component?component=$PROJECT_KEY&metricKeys=coverage,code_smells,bugs,vulnerabilities,security_hotspots,duplicated_lines_density,alert_status,maintainability_rating")
 
           QUALITY_GATE=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="alert_status") | .value')
@@ -81,16 +79,16 @@ jobs:
   "content": "**SonarCloud Alert for genzitizens/test-java-workflows**",
   "embeds": [{
     "title": "🚨 Code Quality Issue Detected",
-    "description": "**Quality Gate**: $QUALITY_GATE\n**Critical Issues**: $CRITICAL_ISSUES\n**Coverage**: $COVERAGE%\n**Code Smells**: $SMELLS\n**Duplications**: $DUPLICATIONS%\n**Maintainability**: $RATING\n**Security Hotspots**: $HOTSPOTS",
+    "description": "**Quality Gate**: '"$QUALITY_GATE"'\n**Critical Issues**: '"$CRITICAL_ISSUES"'\n**Coverage**: '"$COVERAGE"'%\n**Code Smells**: '"$SMELLS"'\n**Duplications**: '"$DUPLICATIONS"'%\n**Maintainability**: '"$RATING"'\n**Security Hotspots**: '"$HOTSPOTS"'",
     "color": 16711680,
-    "url": "https://sonarcloud.io/project/overview?id=$PROJECT_KEY"
+    "url": "https://sonarcloud.io/project/overview?id='"$PROJECT_KEY"'"
   }]
 }
 EOF
-          )
-          curl -X POST "$DISCORD_WEBHOOK" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD"
+            )
+            curl -X POST "$DISCORD_WEBHOOK" \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD"
           else
             echo "✅ No quality gate failures or critical issues."
           fi
