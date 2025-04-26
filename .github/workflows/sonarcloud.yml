@@ -76,7 +76,7 @@ jobs:
           HOTSPOTS=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="security_hotspots") | .value')
 
           if [ "$QUALITY_GATE" != "OK" ] || [ "$CRITICAL_ISSUES" -gt 0 ]; then
-          PAYLOAD=$(cat <<EOF
+            PAYLOAD=$(cat <<'EOF'
 {
   "content": "**SonarCloud Alert for genzitizens/test-java-workflows**",
   "embeds": [{
