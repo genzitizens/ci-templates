@@ -76,17 +76,21 @@ jobs:
           HOTSPOTS=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="security_hotspots") | .value')
 
           if [ "$QUALITY_GATE" != "OK" ] || [ "$CRITICAL_ISSUES" -gt 0 ]; then
+            PAYLOAD=$(cat <<EOF
+            {
+              "content": "**SonarCloud Alert for ${{ github.repository }}**",
+              "embeds": [{
+                "title": "🚨 Code Quality Issue Detected",
+                "description": "**Quality Gate**: $QUALITY_GATE\n**Critical Issues**: $CRITICAL_ISSUES\n**Coverage**: $COVERAGE%\n**Code Smells**: $SMELLS\n**Duplications**: $DUPLICATIONS%\n**Maintainability**: $RATING\n**Security Hotspots**: $HOTSPOTS",
+                "color": 16711680,
+                "url": "https://sonarcloud.io/project/overview?id=$PROJECT_KEY"
+              }]
+            }
+            EOF
+            )
             curl -X POST "$DISCORD_WEBHOOK" \
               -H "Content-Type: application/json" \
-              -d "{
-                \"content\": \"**SonarCloud Alert for ${{ github.repository }}**\",
-                \"embeds\": [{
-                  \"title\": \"Code Quality Issue Detected\",
-                  \"description\": \"**Quality Gate**: $QUALITY_GATE\n**Critical Issues**: $CRITICAL_ISSUES\n**Coverage**: $COVERAGE%\n**Code Smells**: $SMELLS\n**Duplications**: $DUPLICATIONS%\n**Maintainability**: $RATING\n**Security Hotspots**: $HOTSPOTS\",
-                  \"color\": 16711680,
-                  \"url\": \"https://sonarcloud.io/project/overview?id=$PROJECT_KEY\"
-                }]
-              }"
+              -d "$PAYLOAD"
           else
             echo "✅ No quality gate failures or critical issues."
-      
+          fi
