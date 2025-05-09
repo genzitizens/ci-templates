@@ -1,0 +1,50 @@
+name: Reusable - React CI (TypeScript + Tailwind)
+
+on:
+  workflow_call:
+    secrets:
+      DISCORD_WEBHOOK:
+        required: true
+jobs:
+  react-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Build React App
+        run: npm run build
+
+      - name: ✅ Discord Notification (Success)
+        if: success()
+        uses: Ilshidur/action-discord@master
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          message: |
+            ✅ **React CI Passed**
+            • Repo: `${{ github.repository }}`
+            • Branch: `${{ github.ref_name }}`
+            • Author: `${{ github.actor }}`
+
+      - name: ❌ Discord Notification (Failure)
+        if: failure()
+        uses: Ilshidur/action-discord@master
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          message: |
+            ❌ **React CI Failed**
+            • Repo: `${{ github.repository }}`
+            • Branch: `${{ github.ref_name }}`
+            • Author: `${{ github.actor }}`
