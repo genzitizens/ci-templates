@@ -27,8 +27,8 @@ jobs:
       - name: Docker Build
         run: |
           docker build \
-            -t ghcr.io/${{ secrets.GHCR_ORG }}/${{ inputs.image_name }}:latest \
-            -t ghcr.io/${{ secrets.GHCR_ORG }}/${{ inputs.image_name }}:${{ steps.get_sha.outputs.sha_short }} .
+            -t ghcr.io/genzitizens/${{ inputs.image_name }}:latest \
+            -t ghcr.io/genzitizens/${{ inputs.image_name }}:${{ steps.get_sha.outputs.sha_short }} .
 
       - name: Docker Login
         run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u mediocreasian --password-stdin

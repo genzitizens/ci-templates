@@ -45,8 +45,8 @@ jobs:
             echo "Logging into GHCR..."
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
-            echo "Pulling image: ghcr.io/${{ secrets.GHCR_ORG }}/${{ inputs.IMAGE_NAME }}:latest"
-            docker pull ghcr.io/${{ secrets.GHCR_ORG }}/${{ inputs.IMAGE_NAME }}:latest
+            echo "Pulling image: ghcr.io/genzitizens/${{ inputs.IMAGE_NAME }}:latest"
+            docker pull ghcr.io/genzitizens/${{ inputs.IMAGE_NAME }}:latest
 
             echo "Restarting service with Docker Compose"
             docker compose -f ${{ inputs.COMPOSE_PATH }} up -d
