@@ -51,23 +51,25 @@ jobs:
             docker image prune -f
           EOF
 
-      - name: ✅ Notify Discord on Success
+      - name: Send Discord Notification (Success)
         if: success()
         uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          message: |
+          args: |
             ✅ **Deployment SUCCEEDED** on `${{ github.repository }}`
             🧱 Image: `${{ inputs.IMAGE_NAME }}`
             👤 Triggered by: `${{ github.actor }}`
             🔗 [View Workflow Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-      - name: ❌ Notify Discord on Failure
+      - name: Send Discord Notification (Failure)
         if: failure()
         uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          message: |
+          args: |
             🔥 **Deployment FAILED** on `${{ github.repository }}`
             🧱 Image: `${{ inputs.IMAGE_NAME }}`
             👤 Triggered by: `${{ github.actor }}`
