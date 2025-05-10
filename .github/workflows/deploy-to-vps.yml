@@ -13,6 +13,8 @@ on:
         required: true
       GHCR_USERNAME:
         required: true
+      DISCORD_WEBHOOK:
+        required: true
     inputs:
       IMAGE_NAME:
         required: true
@@ -33,16 +35,41 @@ jobs:
 
       - name: 🚀 SSH to VPS and Deploy
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << EOF
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            set -e
+
             echo "Logging into GHCR..."
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
             echo "Pulling new image: ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ inputs.IMAGE_NAME }}:latest"
             docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ inputs.IMAGE_NAME }}:latest
 
-            echo "   Restarting service with Docker Compose"
+            echo "Restarting service with Docker Compose"
             docker compose -f ${{ inputs.COMPOSE_PATH }} up -d
 
-            echo " Cleaning up old images..."
+            echo "Cleaning up old images..."
             docker image prune -f
           EOF
+
+      - name: ✅ Notify Discord on Success
+        if: success()
+        uses: Ilshidur/action-discord@master
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          message: |
+            ✅ **Deployment SUCCEEDED** on `${{ github.repository }}`
+            🧱 Image: `${{ inputs.IMAGE_NAME }}`
+            👤 Triggered by: `${{ github.actor }}`
+            🔗 [View Workflow Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+      - name: ❌ Notify Discord on Failure
+        if: failure()
+        uses: Ilshidur/action-discord@master
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          message: |
+            🔥 **Deployment FAILED** on `${{ github.repository }}`
+            🧱 Image: `${{ inputs.IMAGE_NAME }}`
+            👤 Triggered by: `${{ github.actor }}`
+            🚨 Job: `${{ github.job }}`
+            🔗 [View Workflow Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
