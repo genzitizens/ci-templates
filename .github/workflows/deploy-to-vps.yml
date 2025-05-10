@@ -15,6 +15,8 @@ on:
         required: true
       DISCORD_WEBHOOK:
         required: true
+      GHCR_ORG:
+        required: true
     inputs:
       IMAGE_NAME:
         required: true
@@ -43,8 +45,8 @@ jobs:
             echo "Logging into GHCR..."
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
-            echo "Pulling image: ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ inputs.IMAGE_NAME }}:latest"
-            docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ inputs.IMAGE_NAME }}:latest
+            echo "Pulling image: ghcr.io/${{ secrets.GHCR_ORG }}/${{ inputs.IMAGE_NAME }}:latest"
+            docker pull ghcr.io/${{ secrets.GHCR_ORG }}/${{ inputs.IMAGE_NAME }}:latest
 
             echo "Restarting service with Docker Compose"
             docker compose -f ${{ inputs.COMPOSE_PATH }} up -d
