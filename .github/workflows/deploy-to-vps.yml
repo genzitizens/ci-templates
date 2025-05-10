@@ -26,7 +26,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: 🔐 Setup SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -38,19 +37,21 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             set -e
 
+            echo "Cleaning up old GHCR login (if any)..."
+            docker logout ghcr.io || true
+
             echo "Logging into GHCR..."
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
-            echo "Pulling new image: ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ inputs.IMAGE_NAME }}:latest"
+            echo "Pulling image: ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ inputs.IMAGE_NAME }}:latest"
             docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ inputs.IMAGE_NAME }}:latest
 
             echo "Restarting service with Docker Compose"
             docker compose -f ${{ inputs.COMPOSE_PATH }} up -d
 
-            echo "Cleaning up old images..."
+            echo "Cleaning up unused images..."
             docker image prune -f
           EOF
-
       - name: Send Discord Notification (Success)
         if: success()
         uses: Ilshidur/action-discord@master
