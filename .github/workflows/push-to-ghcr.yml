@@ -41,7 +41,7 @@ jobs:
         if: success()
         uses: Ilshidur/action-discord@master
         env:
-          DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           args: |
             ✅ Docker image pushed — ${{ inputs.image_name }}
