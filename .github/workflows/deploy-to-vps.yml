@@ -45,8 +45,6 @@ jobs:
             IMAGE_NAME="${IMAGE_NAME}"
             COMPOSE_PATH="${COMPOSE_PATH}"
             
-            echo "Pulling from GHCR : $GHCR_ORG"
-
             echo "Cleaning up old GHCR login (if any)..."
             docker logout ghcr.io || true
 
