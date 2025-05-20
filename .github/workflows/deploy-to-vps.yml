@@ -1,5 +1,4 @@
 name: Deploy - to VPS via GHCR
-
 on:
   workflow_call:
     secrets:
@@ -24,7 +23,6 @@ on:
       COMPOSE_PATH:
         required: true
         type: string
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -33,30 +31,24 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
       - name: 🚀 SSH to VPS and Deploy
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << EOF
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             set -e
-
-            GHCR_TOKEN="${GHCR_TOKEN}"
-            GHCR_USERNAME="${GHCR_USERNAME}"
-            GHCR_ORG="${GHCR_ORG}"
-            IMAGE_NAME="${IMAGE_NAME}"
-            COMPOSE_PATH="${COMPOSE_PATH}"
             
+            # Use the exported environment variables directly
             echo "Cleaning up old GHCR login (if any)..."
             docker logout ghcr.io || true
-
+            
             echo "Logging into GHCR..."
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-
+            
             echo "Pulling image: ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest"
             docker pull ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest
-
+            
             echo "Restarting service with Docker Compose"
             docker compose -f $COMPOSE_PATH up -d
-
+            
             echo "Cleaning up unused images..."
             docker image prune -f
           EOF
@@ -78,7 +70,6 @@ jobs:
             🧱 Image: `${{ inputs.IMAGE_NAME }}`
             👤 Triggered by: `${{ github.actor }}`
             🔗 [View Workflow Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
       - name: Send Discord Notification (Failure)
         if: failure()
         uses: Ilshidur/action-discord@master
