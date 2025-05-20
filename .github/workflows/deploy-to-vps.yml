@@ -33,31 +33,30 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: 🚀 SSH to VPS and Deploy
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
             set -e
             
-            # Use the exported environment variables directly
-            echo "Cleaning up old GHCR login (if any)..."
+            export GHCR_TOKEN='${{ secrets.GHCR_TOKEN }}'
+            export GHCR_USERNAME='${{ secrets.GHCR_USERNAME }}'
+            export GHCR_ORG='${{ secrets.GHCR_ORG }}'
+            export IMAGE_NAME='${{ inputs.IMAGE_NAME }}'
+            export COMPOSE_PATH='${{ inputs.COMPOSE_PATH }}'
+            
+            echo 'Cleaning up old GHCR login (if any)...'
             docker logout ghcr.io || true
             
-            echo "Logging into GHCR..."
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            echo 'Logging into GHCR...'
+            echo \"\$GHCR_TOKEN\" | docker login ghcr.io -u \"\$GHCR_USERNAME\" --password-stdin
             
-            echo "Pulling image: ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest"
-            docker pull ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest
+            echo \"Pulling image: ghcr.io/\$GHCR_ORG/\$IMAGE_NAME:latest\"
+            docker pull ghcr.io/\$GHCR_ORG/\$IMAGE_NAME:latest
             
-            echo "Restarting service with Docker Compose"
-            docker compose -f $COMPOSE_PATH up -d
+            echo 'Restarting service with Docker Compose'
+            docker compose -f \$COMPOSE_PATH up -d
             
-            echo "Cleaning up unused images..."
+            echo 'Cleaning up unused images...'
             docker image prune -f
-          EOF
-        env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GHCR_ORG: ${{ secrets.GHCR_ORG }}
-          IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
-          COMPOSE_PATH: ${{ inputs.COMPOSE_PATH }}
+          "
           
       - name: Send Discord Notification (Success)
         if: success()
