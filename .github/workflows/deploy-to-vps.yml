@@ -31,43 +31,67 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      - name: 🚀 SSH to VPS and Deploy
+          
+      - name: Create deployment script
         run: |
-          # Create a deployment script
           cat > deploy.sh << 'EOL'
           #!/bin/bash
           set -e
           
+          # Save arguments to variables
           GHCR_TOKEN="$1"
           GHCR_USERNAME="$2"
           GHCR_ORG="$3"
           IMAGE_NAME="$4"
           COMPOSE_PATH="$5"
           
-          echo "Cleaning up old GHCR login (if any)..."
-          docker logout ghcr.io || true
+          echo "===== Starting deployment process ====="
+          echo "Image: ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest"
+          echo "Compose path: $COMPOSE_PATH"
           
-          echo "Logging into GHCR..."
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+          echo "===== Configuring Docker auth ====="
+          # First completely clean up Docker credentials
+          rm -f ~/.docker/config.json || true
+          mkdir -p ~/.docker
           
-          echo "Pulling image: ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest"
+          # Create Docker config directory and auth file directly
+          echo '{
+            "auths": {
+              "ghcr.io": {
+                "auth": "'$(echo -n "$GHCR_USERNAME:$GHCR_TOKEN" | base64)'"
+              }
+            }
+          }' > ~/.docker/config.json
+          
+          # Verify authentication file
+          echo "Docker config created:"
+          cat ~/.docker/config.json | grep -v auth
+          
+          echo "===== Pulling Docker image ====="
+          # Pull with verbose output
           docker pull ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest
           
-          echo "Restarting service with Docker Compose"
+          echo "===== Deploying with Docker Compose ====="
           docker compose -f $COMPOSE_PATH up -d
           
-          echo "Cleaning up unused images..."
+          echo "===== Cleaning up ====="
           docker image prune -f
+          
+          echo "===== Deployment complete ====="
           EOL
           
-          # Make the script executable
           chmod +x deploy.sh
-          
+      
+      - name: Deploy to VPS
+        run: |
           # Copy the script to the remote server
           scp -o StrictHostKeyChecking=no deploy.sh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/deploy.sh
           
-          # Execute the script with the parameters
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "/tmp/deploy.sh '${{ secrets.GHCR_TOKEN }}' '${{ secrets.GHCR_USERNAME }}' '${{ secrets.GHCR_ORG }}' '${{ inputs.IMAGE_NAME }}' '${{ inputs.COMPOSE_PATH }}' && rm /tmp/deploy.sh"
+          # Run the script with secrets as arguments
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "bash /tmp/deploy.sh '${{ secrets.GHCR_TOKEN }}' '${{ secrets.GHCR_USERNAME }}' '${{ secrets.GHCR_ORG }}' '${{ inputs.IMAGE_NAME }}' '${{ inputs.COMPOSE_PATH }}'"
+          
+          # Clean up
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "rm -f /tmp/deploy.sh"
           
       - name: Send Discord Notification (Success)
         if: success()
@@ -80,6 +104,7 @@ jobs:
             🧱 Image: `${{ inputs.IMAGE_NAME }}`
             👤 Triggered by: `${{ github.actor }}`
             🔗 [View Workflow Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
       - name: Send Discord Notification (Failure)
         if: failure()
         uses: Ilshidur/action-discord@master
