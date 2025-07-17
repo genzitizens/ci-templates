@@ -1,4 +1,4 @@
-name: Push to GHCR
+name: SpringBoot Push to GHCR
 
 on:
   workflow_call:

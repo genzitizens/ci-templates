@@ -100,7 +100,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           args: |
-            ✅ **Deployment SUCCEEDED** on `${{ github.repository }}`
+            ✅ **Deployment SUCCESS** on `${{ github.repository }}`
             🧱 Image: `${{ inputs.IMAGE_NAME }}`
             👤 Triggered by: `${{ github.actor }}`
             🔗 [View Workflow Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
