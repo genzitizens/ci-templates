@@ -13,7 +13,7 @@ This repository provides a collection of reusable GitHub Actions workflows desig
 | `react-ci.yml`                | Builds and tests React applications with optional deployment step.         |
 | `sonarcloud.yml`              | Integrates SonarCloud for static code analysis and quality gate checks.    |
 | `springboot-push-to-ghcr.yml` | Builds Spring Boot app and pushes the OCI image to GHCR.                   |
-| `codeql-scan.yml`             | Scan Source code for vulnerabilities.                   |
+| `java-scan.yml`             | Scan Source code for vulnerabilities.                   |
 
 ## Usage
 
