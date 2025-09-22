@@ -1,0 +1,122 @@
+name: Sync Compose Assets to VPS
+
+on:
+  workflow_call:
+    inputs:
+      compose-path:
+        description: >-
+          Path to the Docker Compose file or directory to upload relative to the
+          repository root.
+        required: true
+        type: string
+      remote-path:
+        description: >-
+          Absolute path on the VPS where the primary docker-compose file should
+          reside (e.g. /opt/my-app/docker-compose.yml).
+        required: true
+        type: string
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
+      VPS_HOST:
+        required: true
+      VPS_USER:
+        required: true
+    outputs:
+      remote-compose-path:
+        description: Absolute path to the docker-compose file on the VPS.
+        value: ${{ jobs.sync.outputs.remote-compose-path }}
+      remote-directory:
+        description: Directory on the VPS containing the synced assets.
+        value: ${{ jobs.sync.outputs.remote-directory }}
+
+jobs:
+  sync:
+    name: Sync compose assets
+    runs-on: ubuntu-latest
+    outputs:
+      remote-compose-path: ${{ steps.prepare.outputs.remote_path }}
+      remote-directory: ${{ steps.prepare.outputs.remote_dir }}
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+
+      - name: Collect compose assets
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          target="${{ inputs.compose-path }}"
+          if [ ! -e "$target" ]; then
+            echo "The provided compose-path '$target' does not exist." >&2
+            exit 1
+          fi
+
+          workspace="${GITHUB_WORKSPACE}/.sync-compose"
+          rm -rf "$workspace"
+          mkdir -p "$workspace"
+
+          if [ -d "$target" ]; then
+            bundle_name="compose-bundle.tar.gz"
+            tar -C "$target" -czf "$workspace/$bundle_name" .
+            echo "is_dir=true" >> "$GITHUB_OUTPUT"
+          elif [ -f "$target" ]; then
+            bundle_name="$(basename "$target")"
+            cp "$target" "$workspace/$bundle_name"
+            echo "is_dir=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "The compose-path must be a file or directory." >&2
+            exit 1
+          fi
+
+          remote_path="${{ inputs.remote-path }}"
+          if [ -z "$remote_path" ]; then
+            echo "The remote-path input cannot be empty." >&2
+            exit 1
+          fi
+          remote_dir="$(dirname "$remote_path")"
+
+          echo "bundle=$workspace/$bundle_name" >> "$GITHUB_OUTPUT"
+          echo "bundle_name=$bundle_name" >> "$GITHUB_OUTPUT"
+          echo "remote_path=$remote_path" >> "$GITHUB_OUTPUT"
+          echo "remote_dir=$remote_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add VPS host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Ensure remote directory exists
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "mkdir -p '${{ steps.prepare.outputs.remote_dir }}'"
+
+      - name: Upload compose file
+        if: steps.prepare.outputs.is_dir == 'false'
+        run: |
+          scp "${{ steps.prepare.outputs.bundle }}" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ steps.prepare.outputs.remote_path }}"
+
+      - name: Upload compose bundle
+        if: steps.prepare.outputs.is_dir == 'true'
+        run: |
+          scp "${{ steps.prepare.outputs.bundle }}" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ steps.prepare.outputs.remote_dir }}/${{ steps.prepare.outputs.bundle_name }}"
+
+      - name: Unpack compose bundle on VPS
+        if: steps.prepare.outputs.is_dir == 'true'
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "cd '${{ steps.prepare.outputs.remote_dir }}' && \
+             tar -xzf '${{ steps.prepare.outputs.bundle_name }}' && \
+             rm -f '${{ steps.prepare.outputs.bundle_name }}'"
+
+      - name: Compose assets synced
+        run: |
+          echo "Compose assets are available at: ${{ steps.prepare.outputs.remote_path }}"
