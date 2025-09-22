@@ -23,6 +23,13 @@ on:
       COMPOSE_PATH:
         required: true
         type: string
+      RUN_COMPOSE_PULL:
+        description: >-
+          When true, execute `docker compose pull` on the VPS before running
+          `docker compose up -d` to refresh service images.
+        required: false
+        default: false
+        type: boolean
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -44,6 +51,7 @@ jobs:
           GHCR_ORG="$3"
           IMAGE_NAME="$4"
           COMPOSE_PATH="$5"
+          RUN_COMPOSE_PULL="$6"
           
           echo "===== Starting deployment process ====="
           echo "Image: ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest"
@@ -71,8 +79,13 @@ jobs:
           # Pull with verbose output
           docker pull ghcr.io/$GHCR_ORG/$IMAGE_NAME:latest
           
+          if [ "$RUN_COMPOSE_PULL" = "true" ]; then
+            echo "===== Refreshing services with docker compose pull ====="
+            docker compose -f "$COMPOSE_PATH" pull
+          fi
+
           echo "===== Deploying with Docker Compose ====="
-          docker compose -f $COMPOSE_PATH up -d
+          docker compose -f "$COMPOSE_PATH" up -d
           
           echo "===== Cleaning up ====="
           docker image prune -f
@@ -88,7 +101,7 @@ jobs:
           scp -o StrictHostKeyChecking=no deploy.sh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/deploy.sh
           
           # Run the script with secrets as arguments
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "bash /tmp/deploy.sh '${{ secrets.GHCR_TOKEN }}' '${{ secrets.GHCR_USERNAME }}' '${{ secrets.GHCR_ORG }}' '${{ inputs.IMAGE_NAME }}' '${{ inputs.COMPOSE_PATH }}'"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "bash /tmp/deploy.sh '${{ secrets.GHCR_TOKEN }}' '${{ secrets.GHCR_USERNAME }}' '${{ secrets.GHCR_ORG }}' '${{ inputs.IMAGE_NAME }}' '${{ inputs.COMPOSE_PATH }}' '${{ inputs.RUN_COMPOSE_PULL }}'"
           
           # Clean up
           ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "rm -f /tmp/deploy.sh"

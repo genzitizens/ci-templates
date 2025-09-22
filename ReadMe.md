@@ -7,6 +7,7 @@ This repository provides a collection of reusable GitHub Actions workflows desig
 | Workflow File                  | Description                                                                 |
 |-------------------------------|-----------------------------------------------------------------------------|
 | `deploy-to-vps.yml`           | Deploys application artifacts or containers to a self-hosted VPS.                       |
+| `sync-compose-to-vps.yml`     | Uploads docker-compose assets to a VPS before running a deployment.        |
 | `java-ci.yml`                 | Java CI workflow: builds, tests, and verifies Java applications using Maven or Gradle.  |
 | `node-ci.yml`                 | Node.js CI workflow: installs dependencies, runs tests, and builds the app. |
 | `push-to-ghcr.yml`            | Pushes container images to GitHub Container Registry (GHCR).               |
@@ -50,6 +51,76 @@ jobs:
       node-version: '20'
 ```
 
+### Example: Sync Compose Assets to a VPS
+
+**Required secrets**
+- `SSH_PRIVATE_KEY`
+- `VPS_HOST`
+- `VPS_USER`
+
+**Inputs**
+- `compose-path`: Path (file or directory) in your repository that should be uploaded.
+- `remote-path`: Destination path on the VPS for the `docker-compose.yml` file.
+
+**Outputs**
+- `remote-compose-path`: The compose file path on the VPS (useful for deployment jobs).
+- `remote-directory`: The directory containing the synced files.
+
+```yaml
+name: Sync Compose Assets
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  sync-compose:
+    uses: your-org/your-repo/.github/workflows/sync-compose-to-vps.yml@main
+    with:
+      compose-path: infra/docker
+      remote-path: /opt/my-app/docker-compose.yml
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+```
+
+### Example: Sync & Deploy to a VPS
+
+```yaml
+name: Sync and Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync-compose:
+    uses: your-org/your-repo/.github/workflows/sync-compose-to-vps.yml@main
+    with:
+      compose-path: infra/docker
+      remote-path: /opt/my-app/docker-compose.yml
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+
+  deploy:
+    needs: sync-compose
+    uses: your-org/your-repo/.github/workflows/deploy-to-vps.yml@main
+    with:
+      IMAGE_NAME: my-app
+      COMPOSE_PATH: ${{ needs.sync-compose.outputs.remote-compose-path }}
+      RUN_COMPOSE_PULL: true # optional but keeps services current
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_ORG: ${{ secrets.GHCR_ORG }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+```
+
 ### Example: Deploy to VPS
 ```yaml
 name: Deploy to VPS
@@ -63,8 +134,18 @@ on:
 jobs:
   deploy:
     uses: your-org/your-repo/.github/workflows/deploy-to-vps.yml@main
+    with:
+      IMAGE_NAME: my-app
+      COMPOSE_PATH: /opt/my-app/docker-compose.yml
+      RUN_COMPOSE_PULL: true # optional, defaults to false
     secrets:
-      ssh_key: \${{ secrets.VPS_SSH_KEY }}
+      SSH_PRIVATE_KEY: \${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST: \${{ secrets.VPS_HOST }}
+      VPS_USER: \${{ secrets.VPS_USER }}
+      GHCR_TOKEN: \${{ secrets.GHCR_TOKEN }}
+      GHCR_USERNAME: \${{ secrets.GHCR_USERNAME }}
+      GHCR_ORG: \${{ secrets.GHCR_ORG }}
+      DISCORD_WEBHOOK: \${{ secrets.DISCORD_WEBHOOK }}
 ```
 
 ### Example: Push to GHCR
