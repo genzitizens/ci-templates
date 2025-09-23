@@ -22,7 +22,6 @@ on:
         required: true
       VPS_USER:
         required: true
-
 jobs:
   sync:
     name: Sync compose assets
