@@ -22,21 +22,11 @@ on:
         required: true
       VPS_USER:
         required: true
-    outputs:
-      remote-compose-path:
-        description: Absolute path to the docker-compose file on the VPS.
-        value: ${{ jobs.sync.outputs.remote-compose-path }}
-      remote-directory:
-        description: Directory on the VPS containing the synced assets.
-        value: ${{ jobs.sync.outputs.remote-directory }}
 
 jobs:
   sync:
     name: Sync compose assets
     runs-on: ubuntu-latest
-    outputs:
-      remote-compose-path: ${{ steps.prepare.outputs.remote_path }}
-      remote-directory: ${{ steps.prepare.outputs.remote_dir }}
     steps:
       - name: Checkout caller repository
         uses: actions/checkout@v4
