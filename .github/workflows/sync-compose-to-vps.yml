@@ -26,11 +26,9 @@ on:
       remote-compose-path:
         description: Absolute path to the docker-compose file on the VPS.
         value: ${{ jobs.sync.outputs.remote-compose-path }}
-        sensitive: true
       remote-directory:
         description: Directory on the VPS containing the synced assets.
         value: ${{ jobs.sync.outputs.remote-directory }}
-        sensitive: true
 
 jobs:
   sync:
