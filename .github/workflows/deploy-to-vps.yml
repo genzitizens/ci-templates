@@ -34,6 +34,23 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: ✅ Ensure repository has at least one tag
+        env:
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          echo "Checking tags for ${REPO}"
+          TAG_COUNT=$(git ls-remote --tags --refs "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git" | wc -l | tr -d ' ')
+
+          if [ "${TAG_COUNT}" -eq 0 ]; then
+            echo "::error::No tags found in ${REPO}. Create a tag before running this deployment workflow."
+            exit 1
+          fi
+
+          echo "Found ${TAG_COUNT} tags in ${REPO}. Proceeding with deployment."
+
       - name: 🔐 Setup SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
