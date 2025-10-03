@@ -6,7 +6,7 @@ This repository provides a collection of reusable GitHub Actions workflows desig
 
 | Workflow File                  | Description                                                                 |
 |-------------------------------|-----------------------------------------------------------------------------|
-| `deploy-to-vps.yml`           | Deploys application artifacts or containers to a self-hosted VPS.                       |
+| `deploy-to-vps.yml`           | Deploys application artifacts or containers to a self-hosted VPS. Requires at least one Git tag in the calling repository. |
 | `sync-compose-to-vps.yml`     | Uploads docker-compose assets to a VPS before running a deployment.        |
 | `java-ci.yml`                 | Java CI workflow: builds, tests, and verifies Java applications using Maven or Gradle.  |
 | `node-ci.yml`                 | Node.js CI workflow: installs dependencies, runs tests, and builds the app. |
@@ -121,7 +121,9 @@ jobs:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 ```
 
-### Example: Deploy to VPS
+### Example: Deploy to VPS (requires tags)
+
+> **Prerequisite:** The calling repository must have at least one Git tag before this workflow runs. Create one with `git tag v1.0.0` followed by `git push --tags`.
 ```yaml
 name: Deploy to VPS
 
@@ -138,6 +140,32 @@ jobs:
       IMAGE_NAME: my-app
       COMPOSE_PATH: /opt/my-app/docker-compose.yml
       RUN_COMPOSE_PULL: true # optional, defaults to false
+    secrets:
+      SSH_PRIVATE_KEY: \${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST: \${{ secrets.VPS_HOST }}
+      VPS_USER: \${{ secrets.VPS_USER }}
+      GHCR_TOKEN: \${{ secrets.GHCR_TOKEN }}
+      GHCR_USERNAME: \${{ secrets.GHCR_USERNAME }}
+      GHCR_ORG: \${{ secrets.GHCR_ORG }}
+      DISCORD_WEBHOOK: \${{ secrets.DISCORD_WEBHOOK }}
+```
+
+#### Triggering the deployment after tagging
+
+```yaml
+name: Release Deployment
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    uses: your-org/your-repo/.github/workflows/deploy-to-vps.yml@main
+    with:
+      IMAGE_NAME: my-app
+      COMPOSE_PATH: /opt/my-app/docker-compose.yml
     secrets:
       SSH_PRIVATE_KEY: \${{ secrets.VPS_SSH_KEY }}
       VPS_HOST: \${{ secrets.VPS_HOST }}
